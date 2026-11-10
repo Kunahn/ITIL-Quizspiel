@@ -1041,7 +1041,7 @@ var T=EN?{
   teamRes:function(c,m,p,d){return c+'/'+m+' correct · +'+p+(d?' (×2)':'')},
   members:function(n){return n===1?'1 player':n+' players'},
   timeUp:'Time is up',nAns:function(a,b){return a+' of '+b+' answered'},
-  leave:'Leave game',left:'You have left the game. Pick a team to join again.',kick:'Remove from team',kicked:'The host removed you from your team. You can pick a team again.',
+  teamLeave:'Leave team',teamLeft:'You are no longer in a team and are just watching. Click a team to play again.',leave:'Leave game',left:'You have left the game. Pick a team to join again.',kick:'Remove from team',kicked:'The host removed you from your team. You can pick a team again.',
   mine:'Your answers',myScore:function(r,n){return r+' of '+n+' correct'},evalQ:'Evaluation by question',evalP:'Evaluation by player',
   colQ:'Question',colRight:'correct',colAns:'answered',player:'Player',team:'Team',noData:'No player data for questions before a host change.',
   resume:'Game in progress. You can join a team and play from the current question.'
@@ -1063,7 +1063,7 @@ var T=EN?{
   teamRes:function(c,m,p,d){return c+'/'+m+' richtig · +'+p+(d?' (×2)':'')},
   members:function(n){return n===1?'1 Person':n+' Personen'},
   timeUp:'Zeit ist um',nAns:function(a,b){return a+' von '+b+' haben geantwortet'},
-  leave:'Spiel verlassen',left:'Du hast das Spiel verlassen. Wähle ein Team, um wieder mitzuspielen.',kick:'Aus dem Team nehmen',kicked:'Der Host hat dich aus deinem Team genommen. Du kannst wieder ein Team wählen.',
+  teamLeave:'Team verlassen',teamLeft:'Du bist in keinem Team mehr und schaust nur zu. Klicke auf ein Team, um wieder mitzuspielen.',leave:'Spiel verlassen',left:'Du hast das Spiel verlassen. Wähle ein Team, um wieder mitzuspielen.',kick:'Aus dem Team nehmen',kicked:'Der Host hat dich aus deinem Team genommen. Du kannst wieder ein Team wählen.',
   mine:'Deine Antworten',myScore:function(r,n){return r+' von '+n+' richtig'},evalQ:'Auswertung nach Fragen',evalP:'Auswertung nach Spielenden',
   colQ:'Frage',colRight:'richtig',colAns:'beantwortet',player:'Person',team:'Team',noData:'Für Fragen vor einem Host-Wechsel liegen keine Einzelantworten vor.',
   resume:'Das Spiel läuft schon. Wähle ein Team, dann spielst du ab der aktuellen Frage mit.'
@@ -1222,7 +1222,9 @@ elTake.addEventListener('click',function(){
 });
 var elLeave=h('button',{type:'button',cls:'btn',text:T.leave});
 elLeave.addEventListener('click',function(){me.tm=-1;me.an=null;save();notice=T.left;push();if(typeof window.__quizLeave==='function')window.__quizLeave()});
-var elSetup=h('div',{cls:'gm-row'},[h('label',null,[T.name+' ',elName]),h('label',{cls:'gm-switch'},[elHostT,T.hostToggle]),elTake,elLeave]);
+var elTeamLeave=h('button',{type:'button',cls:'btn',text:T.teamLeave});
+elTeamLeave.addEventListener('click',function(){me.tm=-1;me.an=null;save();notice=T.teamLeft;push()});
+var elSetup=h('div',{cls:'gm-row'},[h('label',null,[T.name+' ',elName]),h('label',{cls:'gm-switch'},[elHostT,T.hostToggle]),elTake,elTeamLeave,elLeave]);
 var elHostInfo=h('div',{cls:'small'});
 var elNotice=h('div',{cls:'gm-notice',role:'status'});
 var elTeams=h('div',{cls:'gm-teams'});
@@ -1255,7 +1257,8 @@ function render(){
   elHostT.checked=me.hs>0;
   elHostT.disabled=mode==='solo'||(!!hp&&!hp.sameTab&&!(me.hs>0));
   elTake.style.display=(mode==='live'&&hp&&!hp.sameTab)?'':'none';
-  elLeave.style.display=(!host&&me.tm>=0&&g&&g.ph!=='lobby')?'':'none';
+  elTeamLeave.style.display=(!(host&&mode==='live')&&me.tm>=0)?'':'none';
+  elLeave.style.display=(mode==='live'&&!host)?'':'none';
   elHostInfo.textContent=mode==='solo'?'':(hp?T.hostOther+(cleanName(qzOf(hp).nm)||(hp.sameTab?T.you:T.unnamed))+(hp.sameTab?' ✓':''):T.noHost);
   elNotice.textContent=notice||'';elNotice.style.display=notice?'':'none';
   /* Teams */
