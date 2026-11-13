@@ -1084,7 +1084,7 @@ var ls=jget('itilQuiz')||{};
 var SS=null;try{SS=window.sessionStorage}catch(e){}
 var cid=SS?sget(SS,'itilQuizCid'):null;if(!cid){cid=Math.random().toString(36).slice(2,10);if(SS)sset(SS,'itilQuizCid',cid)}
 var me={nm:String(ls.nm||'').slice(0,24),tm:(typeof ls.tm==='number'?ls.tm:-1),tj:(typeof ls.tj==='number'?ls.tj:0),hs:0,g:null,an:null};
-var FIN=3000,seenFin='';
+var FIN=3000,seenFin='',lastMark=0;
 var lastG=null,deadline=0,seenQ='',notice='',sure=false,hist=[],seenKick=0,lgSent=false;
 function save(){jset('itilQuiz',{nm:me.nm,tm:me.tm,tj:me.tj})}
 function myKey(gid){return 'itilQuizMy:'+gid+':'+(me.nm||cid)}
@@ -1178,8 +1178,9 @@ function bestState(ps){
   c.sort(function(a,b){return (b.ts||0)-(a.ts||0)});
   return c[0]?cp(c[0]):defaultG();
 }
-function becomeHost(minHs){
-  var ps=peers();me.g=bestState(ps);me.hs=minHs?Math.max(1,minHs-1):Date.now();
+function hostMark(on){if(!SS)return;if(on)sset(SS,'itilQuizHostOn',JSON.stringify({hs:me.hs,t:Date.now()}));else{try{SS.removeItem('itilQuizHostOn')}catch(e){}}}
+function becomeHost(minHs,exact){
+  var ps=peers();me.g=bestState(ps);me.hs=exact||(minHs?Math.max(1,minHs-1):Date.now());hostMark(true);
   var sh=jget('itilQuizHist');hist=(sh&&sh.id===me.g.id&&sh.h)?sh.h:[];
   if(me.g.ph==='q'){if(!(deadline>Date.now()))deadline=Date.now()+(me.g.t||20)*1000}
   lastG=me.g;push();
@@ -1190,7 +1191,8 @@ setInterval(function(){
   if(g&&g.ph==='q'){var key=g.id+':'+g.i;if(key!==seenQ){seenQ=key;seenFin='';if(!amHost(ps))deadline=Date.now()+(g.dl||20000)}
     if(g.fin&&seenFin!==key){seenFin=key;if(!amHost(ps))deadline=Math.min(deadline,Date.now()+FIN)}}
   if(g&&!amHost(ps)){var k=g.kick&&g.kick[cid];if(k&&k>=me.tj&&me.tm>=0&&k!==seenKick){seenKick=k;me.tm=-1;save();notice=T.kicked;push();return}}
-  if(me.hs>0&&mode==='live'){var hp=hostPeer(ps);if(hp&&!hp.sameTab){me.hs=0;me.g=null;notice=T.takenOver;push();return}}
+  if(me.hs>0&&mode==='live'){var hp=hostPeer(ps);if(hp&&!hp.sameTab){me.hs=0;me.g=null;hostMark(false);notice=T.takenOver;push();return}
+    if(Date.now()-lastMark>2000){lastMark=Date.now();hostMark(true)}}
   if(amHost(ps)&&me.g&&me.g.ph==='q'){
     var pl=players(ps,me.g),done=pl.filter(function(p){var a=qzOf(p).an;return a&&a.id===me.g.id&&a.i===me.g.i}).length;
     if(pl.length>0&&done===pl.length&&!me.g.fin){var gf=cp(me.g);gf.fin=1;deadline=Math.min(deadline,Date.now()+FIN);setG(gf);return}
@@ -1213,7 +1215,7 @@ elName.value=me.nm;
 elName.addEventListener('input',function(){me.nm=cleanName(elName.value);save();clearTimeout(elName._t);elName._t=setTimeout(push,300)});
 var elHostT=h('input',{type:'checkbox',role:'switch'});
 elHostT.addEventListener('change',function(){
-  if(elHostT.checked){becomeHost(0)}else{me.hs=0;push()}
+  if(elHostT.checked){becomeHost(0)}else{me.hs=0;hostMark(false);push()}
 });
 var elTake=h('button',{type:'button',cls:'btn',text:T.takeOver});
 elTake.addEventListener('click',function(){
@@ -1433,6 +1435,9 @@ if(window.claude&&typeof window.claude.use==='function'){
     r.onPeers(function(){render()},onErr);
     r.onConnection(function(){render()},onErr);
     push();
+    /* Host-Rolle nach Sprachwechsel oder Neuladen im selben Tab wiederherstellen */
+    var hm=null;try{hm=SS&&JSON.parse(SS.getItem('itilQuizHostOn')||'null')}catch(e){}
+    if(hm&&hm.hs&&Date.now()-hm.t<120000)setTimeout(function(){if(mode!=='live'||me.hs>0)return;var hp=hostPeer(peers());if(!hp||qzOf(hp).hs>=hm.hs)becomeHost(0,hm.hs)},1800);
   }).catch(function(){clearTimeout(waited);goSolo()});
 }else{clearTimeout(waited);goSolo()}
 })();
